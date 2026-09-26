@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.schemas import ActionResult, EntryPayload, PageResult
+from app.schemas import ActionResult, EntryPayload, ImportPayload, PageResult
 from app.services.tunnel import TunnelService
 
 router = APIRouter(prefix="/api/tunnel", tags=["隧道设施"])
@@ -28,6 +28,36 @@ def list_entries(
         raise HTTPException(status_code=400, detail="每页最多 200 条，请缩小分页范围")
     items, total = service.list_entries(keyword=keyword, status=status, page=page, size=size)
     return PageResult(items=items, total=total, page=page, size=size)
+
+
+@router.get("/export")
+def export_entries() -> dict[str, Any]:
+    """导出隧道设施清单：返回当前过滤条件下的全量数据。"""
+    items, total = service.list_entries(page=1, size=10000)
+    return {"module": "tunnel", "total": total, "items": items}
+
+
+@router.post("/import")
+def import_entries(payload: ImportPayload) -> dict[str, Any]:
+    """导入一份台账材料：逐行校验落库并返回每行结果；同一份材料重复提交只算第一次。"""
+    if not payload.content.strip():
+        raise HTTPException(status_code=400, detail="材料内容为空，请按固定列整理后再上传")
+    return service.import_entries(content=payload.content, filename=payload.filename)
+
+
+@router.get("/imports")
+def list_imports() -> dict[str, Any]:
+    """导入批次列表：每批附台账侧落库数，结果列表与隧道台账对账用。"""
+    return {"items": service.list_imports()}
+
+
+@router.get("/imports/{batch_id}")
+def get_import(batch_id: str) -> dict[str, Any]:
+    """单个批次的逐行结果；批次不存在时给出可读的错误说明。"""
+    batch = service.get_import(batch_id)
+    if batch is None:
+        raise HTTPException(status_code=404, detail=f"导入批次 {batch_id} 不存在")
+    return batch
 
 
 @router.get("/{entry_id}", response_model=dict)
@@ -56,10 +86,3 @@ def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
     if entry is None:
         return ActionResult(ok=False, message=message)
     return ActionResult(ok=True, message=message, entry=entry)
-
-
-@router.get("/export")
-def export_entries() -> dict[str, Any]:
-    """导出隧道设施清单：返回当前过滤条件下的全量数据。"""
-    items, total = service.list_entries(page=1, size=10000)
-    return {"module": "tunnel", "total": total, "items": items}

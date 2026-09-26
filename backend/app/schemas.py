@@ -28,6 +28,13 @@ class EntryPayload(BaseModel):
     remark: str | None = None
 
 
+class ImportPayload(BaseModel):
+    """台账导入材料：固定列的文本内容，文件名仅用于留档展示。"""
+
+    content: str = ""
+    filename: str | None = None
+
+
 
 class RoadEntry(BaseModel):
     """道路设施明细结构。"""
