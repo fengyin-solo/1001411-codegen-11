@@ -19,3 +19,14 @@ export async function fetchJson<T>(path: string): Promise<T> {
   }
   return (await response.json()) as T
 }
+
+/** 上传一份材料文件：走 multipart 表单，不能带 JSON 的 Content-Type。 */
+export function upload(path: string, file: File): Promise<Response> {
+  const url = path.startsWith('http') ? path : `${API_BASE}${path}`
+  const form = new FormData()
+  form.append('file', file)
+  return fetch(url, { method: 'POST', body: form }).catch((error: unknown) => {
+    const detail = error instanceof Error ? error.message : '请求未送达'
+    throw new Error(`接口请求失败：${detail}`)
+  })
+}

@@ -28,6 +28,32 @@ class EntryPayload(BaseModel):
     remark: str | None = None
 
 
+class ImportRowResult(BaseModel):
+    """台账导入的单行结论：收下还是被拒，被拒时写明原因。"""
+
+    row_no: int
+    accepted: bool
+    reasons: list[str] = Field(default_factory=list)
+    values: dict[str, Any] = Field(default_factory=dict)
+    entry_id: int | None = None
+
+
+class ImportBatchResult(BaseModel):
+    """一份台账材料的导入结果：批次摘要加逐行结论，重复编码单独列出。"""
+
+    ok: bool
+    batch_id: str
+    filename: str
+    imported_at: str
+    deduplicated: bool = False
+    total: int = 0
+    accepted: int = 0
+    rejected: int = 0
+    duplicate_codes: list[str] = Field(default_factory=list)
+    rows: list[ImportRowResult] = Field(default_factory=list)
+    message: str = ""
+
+
 
 class RoadEntry(BaseModel):
     """道路设施明细结构。"""
